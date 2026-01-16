@@ -9,6 +9,7 @@ export default function Home() {
   const [currentFolder, setCurrentFolder] = useState<string>('');
   const [notes, setNotes] = useState<string[]>([]);
   const [currentNote, setCurrentNote] = useState<string>('');
+  const [saving, setSaving] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
@@ -66,6 +67,7 @@ export default function Home() {
 
     if (!folder || !filename) return;
 
+    setSaving(true);
     try {
       await fetch(`${API_URL}/note`, {
         method: 'POST',
@@ -73,126 +75,108 @@ export default function Home() {
         body: JSON.stringify({ folder, filename, content: noteContent })
       });
       setContent('');
+      setMode('browse');
     } catch (err) {
       console.error('Failed to save note:', err);
     }
-  };
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    const touches = e.touches.length;
-    
-    if (touches === 2) {
-      e.preventDefault();
-    } else if (touches === 3) {
-      e.preventDefault();
-    }
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (e.touches.length === 2) {
-      e.preventDefault();
-    }
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    const touches = e.changedTouches.length;
-    
-    if (touches === 2 && mode === 'write') {
-      // Two finger swipe up = save
-      saveNote();
-    } else if (touches === 2 && mode === 'browse') {
-      // Two finger swipe down = browse
-      setMode('browse');
-    } else if (touches === 3) {
-      // Three finger tap = new folder (handled in write mode)
-      if (mode === 'write') {
-        // User creates folder by typing folder name
-      }
-    }
-  };
-
-  const handleWheel = (e: React.WheelEvent) => {
-    if (e.ctrlKey) {
-      e.preventDefault();
-      if (e.deltaY < 0 && mode === 'write') {
-        // Two finger scroll up = save
-        saveNote();
-      } else if (e.deltaY > 0) {
-        // Two finger scroll down = browse
-        setMode('browse');
-      }
-    }
+    setSaving(false);
   };
 
   return (
-    <div 
-      className="min-h-screen bg-black text-white p-4"
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-      onWheel={handleWheel}
-    >
+    <div className="min-h-screen bg-black text-white flex flex-col" style={{backgroundColor: '#000'}}>
       {mode === 'write' && (
-        <textarea
-          ref={textareaRef}
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          className="w-full h-screen bg-black text-white border-none outline-none resize-none font-mono"
-          placeholder="folder&#10;filename.txt&#10;content..."
-        />
+        <>
+          <textarea
+            ref={textareaRef}
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            className="flex-1 w-full bg-black text-white border-none outline-none resize-none p-4 font-mono"
+            style={{backgroundColor: '#000', color: '#fff'}}
+            placeholder="folder&#10;filename.txt&#10;content..."
+            autoFocus
+          />
+          <div className="flex gap-2 p-4 bg-black border-t border-gray-800">
+            <button
+              onClick={saveNote}
+              disabled={saving}
+              className="flex-1 bg-green-600 text-white py-3 px-4 rounded font-bold disabled:opacity-50"
+            >
+              {saving ? 'Saving...' : 'Save'}
+            </button>
+            <button
+              onClick={() => setMode('browse')}
+              className="flex-1 bg-gray-700 text-white py-3 px-4 rounded font-bold"
+            >
+              Browse
+            </button>
+          </div>
+        </>
       )}
 
       {mode === 'browse' && !currentFolder && (
-        <div className="space-y-2">
-          <h2 className="text-xl mb-4">Folders</h2>
-          {folders.map((folder) => (
-            <div
-              key={folder}
-              onClick={() => fetchNotes(folder)}
-              className="p-4 border border-gray-800 cursor-pointer hover:bg-gray-900"
+        <div className="flex-1 p-4 bg-black overflow-auto">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold">Folders</h2>
+            <button
+              onClick={() => setMode('write')}
+              className="bg-green-600 text-white py-2 px-4 rounded font-bold"
             >
-              {folder}
-            </div>
-          ))}
-          <button
-            onClick={() => setMode('write')}
-            className="mt-4 p-4 border border-gray-800 w-full"
-          >
-            New Note
-          </button>
+              + New Note
+            </button>
+          </div>
+          <div className="space-y-2">
+            {folders.length === 0 ? (
+              <p className="text-gray-500">No folders yet. Create your first note!</p>
+            ) : (
+              folders.map((folder) => (
+                <div
+                  key={folder}
+                  onClick={() => fetchNotes(folder)}
+                  className="p-4 border border-gray-800 rounded cursor-pointer hover:bg-gray-900 active:bg-gray-800"
+                >
+                  📁 {folder}
+                </div>
+              ))
+            )}
+          </div>
         </div>
       )}
 
       {mode === 'browse' && currentFolder && (
-        <div className="space-y-2">
-          <button
-            onClick={() => setCurrentFolder('')}
-            className="mb-4 text-gray-500"
-          >
-            ← Back
-          </button>
-          <h2 className="text-xl mb-4">{currentFolder}</h2>
-          {notes.map((note) => (
-            <div
-              key={note}
-              onClick={() => fetchNote(currentFolder, note)}
-              className="p-4 border border-gray-800 cursor-pointer hover:bg-gray-900"
+        <div className="flex-1 p-4 bg-black overflow-auto">
+          <div className="flex justify-between items-center mb-4">
+            <button
+              onClick={() => setCurrentFolder('')}
+              className="text-gray-400 hover:text-white"
             >
-              {note}
-            </div>
-          ))}
+              ← Back
+            </button>
+            <h2 className="text-xl font-bold">{currentFolder}</h2>
+            <div className="w-16"></div>
+          </div>
+          <div className="space-y-2">
+            {notes.map((note) => (
+              <div
+                key={note}
+                onClick={() => fetchNote(currentFolder, note)}
+                className="p-4 border border-gray-800 rounded cursor-pointer hover:bg-gray-900 active:bg-gray-800"
+              >
+                📄 {note}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
       {mode === 'view' && (
-        <div className="space-y-4">
+        <div className="flex-1 p-4 bg-black overflow-auto flex flex-col">
           <button
             onClick={() => { setMode('browse'); setCurrentNote(''); }}
-            className="text-gray-500"
+            className="text-gray-400 hover:text-white mb-4 self-start"
           >
             ← Back
           </button>
-          <pre className="whitespace-pre-wrap font-mono">{currentNote}</pre>
+          <pre className="whitespace-pre-wrap font-mono text-sm">{currentNote}</pre>
         </div>
       )}
     </div>
