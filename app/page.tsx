@@ -83,29 +83,29 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col" style={{backgroundColor: '#000'}}>
+    <div className="h-screen bg-black text-white flex flex-col overflow-hidden" style={{backgroundColor: '#000'}}>
       {mode === 'write' && (
         <>
           <textarea
             ref={textareaRef}
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            className="flex-1 w-full bg-black text-white border-none outline-none resize-none p-4 font-mono"
+            className="flex-1 w-full bg-black text-white border-none outline-none resize-none p-3 font-mono text-sm"
             style={{backgroundColor: '#000', color: '#fff'}}
             placeholder="folder&#10;filename.txt&#10;content..."
             autoFocus
           />
-          <div className="flex gap-2 p-4 bg-black border-t border-gray-800">
+          <div className="flex gap-2 p-3 bg-black border-t border-gray-800 safe-area-bottom">
             <button
               onClick={saveNote}
               disabled={saving}
-              className="flex-1 bg-green-600 text-white py-3 px-4 rounded font-bold disabled:opacity-50"
+              className="flex-1 bg-green-600 text-white py-3 px-4 rounded font-bold disabled:opacity-50 active:bg-green-700"
             >
               {saving ? 'Saving...' : 'Save'}
             </button>
             <button
               onClick={() => setMode('browse')}
-              className="flex-1 bg-gray-700 text-white py-3 px-4 rounded font-bold"
+              className="flex-1 bg-gray-700 text-white py-3 px-4 rounded font-bold active:bg-gray-600"
             >
               Browse
             </button>
@@ -114,25 +114,25 @@ export default function Home() {
       )}
 
       {mode === 'browse' && !currentFolder && (
-        <div className="flex-1 p-4 bg-black overflow-auto">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold">Folders</h2>
+        <div className="flex-1 flex flex-col bg-black overflow-hidden">
+          <div className="flex justify-between items-center p-3 border-b border-gray-800">
+            <h2 className="text-lg font-bold">Folders</h2>
             <button
               onClick={() => setMode('write')}
-              className="bg-green-600 text-white py-2 px-4 rounded font-bold"
+              className="bg-green-600 text-white py-2 px-3 rounded font-bold text-sm active:bg-green-700"
             >
-              + New Note
+              + New
             </button>
           </div>
-          <div className="space-y-2">
+          <div className="flex-1 overflow-auto p-3 space-y-2">
             {folders.length === 0 ? (
-              <p className="text-gray-500">No folders yet. Create your first note!</p>
+              <p className="text-gray-500 text-sm">No folders yet. Create your first note!</p>
             ) : (
               folders.map((folder) => (
                 <div
                   key={folder}
                   onClick={() => fetchNotes(folder)}
-                  className="p-4 border border-gray-800 rounded cursor-pointer hover:bg-gray-900 active:bg-gray-800"
+                  className="p-3 border border-gray-800 rounded cursor-pointer active:bg-gray-800 text-sm"
                 >
                   📁 {folder}
                 </div>
@@ -143,40 +143,48 @@ export default function Home() {
       )}
 
       {mode === 'browse' && currentFolder && (
-        <div className="flex-1 p-4 bg-black overflow-auto">
-          <div className="flex justify-between items-center mb-4">
+        <div className="flex-1 flex flex-col bg-black overflow-hidden">
+          <div className="flex justify-between items-center p-3 border-b border-gray-800">
             <button
               onClick={() => setCurrentFolder('')}
-              className="text-gray-400 hover:text-white"
+              className="text-gray-400 active:text-white text-sm"
             >
               ← Back
             </button>
-            <h2 className="text-xl font-bold">{currentFolder}</h2>
-            <div className="w-16"></div>
+            <h2 className="text-lg font-bold">{currentFolder}</h2>
+            <div className="w-12"></div>
           </div>
-          <div className="space-y-2">
-            {notes.map((note) => (
-              <div
-                key={note}
-                onClick={() => fetchNote(currentFolder, note)}
-                className="p-4 border border-gray-800 rounded cursor-pointer hover:bg-gray-900 active:bg-gray-800"
-              >
-                📄 {note}
-              </div>
-            ))}
+          <div className="flex-1 overflow-auto p-3 space-y-2">
+            {notes.length === 0 ? (
+              <p className="text-gray-500 text-sm">No notes in this folder</p>
+            ) : (
+              notes.map((note) => (
+                <div
+                  key={note}
+                  onClick={() => fetchNote(currentFolder, note)}
+                  className="p-3 border border-gray-800 rounded cursor-pointer active:bg-gray-800 text-sm"
+                >
+                  📄 {note}
+                </div>
+              ))
+            )}
           </div>
         </div>
       )}
 
       {mode === 'view' && (
-        <div className="flex-1 p-4 bg-black overflow-auto flex flex-col">
-          <button
-            onClick={() => { setMode('browse'); setCurrentNote(''); }}
-            className="text-gray-400 hover:text-white mb-4 self-start"
-          >
-            ← Back
-          </button>
-          <pre className="whitespace-pre-wrap font-mono text-sm">{currentNote}</pre>
+        <div className="flex-1 flex flex-col bg-black overflow-hidden">
+          <div className="p-3 border-b border-gray-800">
+            <button
+              onClick={() => { setMode('browse'); setCurrentNote(''); }}
+              className="text-gray-400 active:text-white text-sm"
+            >
+              ← Back
+            </button>
+          </div>
+          <div className="flex-1 overflow-auto p-3">
+            <pre className="whitespace-pre-wrap font-mono text-xs">{currentNote}</pre>
+          </div>
         </div>
       )}
     </div>
