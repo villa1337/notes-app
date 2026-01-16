@@ -4,17 +4,18 @@ import { useState, useEffect, useRef } from 'react';
 
 export default function Home() {
   const [content, setContent] = useState('');
-  const [mode, setMode] = useState<'write' | 'browse' | 'view'>('write');
+  const [mode, setMode] = useState<'write' | 'browse' | 'view' | 'edit'>('write');
   const [folders, setFolders] = useState<string[]>([]);
   const [currentFolder, setCurrentFolder] = useState<string>('');
   const [notes, setNotes] = useState<string[]>([]);
   const [currentNote, setCurrentNote] = useState<string>('');
+  const [currentFilename, setCurrentFilename] = useState<string>('');
   const [saving, setSaving] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
   useEffect(() => {
-    if (mode === 'write' && textareaRef.current) {
+    if ((mode === 'write' || mode === 'edit') && textareaRef.current) {
       textareaRef.current.focus();
     }
   }, [mode]);
@@ -51,6 +52,7 @@ export default function Home() {
       const res = await fetch(`${API_URL}/note/${folder}/${filename}`);
       const data = await res.json();
       setCurrentNote(data.content || '');
+      setCurrentFilename(filename);
       setMode('view');
     } catch (err) {
       console.error('Failed to fetch note:', err);
@@ -82,6 +84,36 @@ export default function Home() {
     setSaving(false);
   };
 
+  const updateNote = async () => {
+    if (!currentFolder || !currentFilename) return;
+
+    setSaving(true);
+    try {
+      await fetch(`${API_URL}/note`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ folder: currentFolder, filename: currentFilename, content })
+      });
+      setContent('');
+      setMode('browse');
+    } catch (err) {
+      console.error('Failed to update note:', err);
+    }
+    setSaving(false);
+  };
+
+  const renderContent = (text: string) => {
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const parts = text.split(urlRegex);
+    
+    return parts.map((part, i) => {
+      if (part.match(urlRegex)) {
+        return <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-400 underline">{part}</a>;
+      }
+      return part;
+    });
+  };
+
   return (
     <div className="h-screen bg-black text-white flex flex-col overflow-hidden" style={{backgroundColor: '#000'}}>
       {mode === 'write' && (
@@ -108,6 +140,34 @@ export default function Home() {
               className="flex-1 bg-gray-700 text-white py-3 px-4 rounded font-bold active:bg-gray-600"
             >
               Browse
+            </button>
+          </div>
+        </>
+      )}
+
+      {mode === 'edit' && (
+        <>
+          <textarea
+            ref={textareaRef}
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            className="flex-1 w-full bg-black text-white border-none outline-none resize-none p-3 font-mono text-sm"
+            style={{backgroundColor: '#000', color: '#fff'}}
+            autoFocus
+          />
+          <div className="flex gap-2 p-3 bg-black border-t border-gray-800 safe-area-bottom">
+            <button
+              onClick={updateNote}
+              disabled={saving}
+              className="flex-1 bg-green-600 text-white py-3 px-4 rounded font-bold disabled:opacity-50 active:bg-green-700"
+            >
+              {saving ? 'Saving...' : 'Update'}
+            </button>
+            <button
+              onClick={() => { setMode('view'); setContent(''); }}
+              className="flex-1 bg-gray-700 text-white py-3 px-4 rounded font-bold active:bg-gray-600"
+            >
+              Cancel
             </button>
           </div>
         </>
@@ -174,16 +234,26 @@ export default function Home() {
 
       {mode === 'view' && (
         <div className="flex-1 flex flex-col bg-black overflow-hidden">
-          <div className="p-3 border-b border-gray-800">
+          <div className="flex justify-between items-center p-3 border-b border-gray-800">
             <button
               onClick={() => { setMode('browse'); setCurrentNote(''); }}
               className="text-gray-400 active:text-white text-sm"
             >
               ← Back
             </button>
+            <button
+              onClick={() => { setContent(currentNote); setMode('edit'); }}
+              className="bg-blue-600 text-white py-2 px-3 rounded font-bold text-sm active:bg-blue-700"
+            >
+              Edit
+            </button>
           </div>
           <div className="flex-1 overflow-auto p-3">
-            <pre className="whitespace-pre-wrap font-mono text-xs">{currentNote}</pre>
+            <pre className="whitespace-pre-wrap font-mono text-xs">
+              {currentNote.split('\n').map((line, i) => (
+                <div key={i}>{renderContent(line)}</div>
+              ))}
+            </pre>
           </div>
         </div>
       )}
